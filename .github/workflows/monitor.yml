@@ -19,7 +19,20 @@ jobs:
       - name: Fetch page and check for changes
         id: check
         run: |
-          curl -s -A "Mozilla/5.0" "https://www.31sumai.com/attend/X2121/" -o current_raw.html
+          curl -s --max-time 30 --retry 2 --retry-delay 5 \
+            -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+            -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
+            -H "Accept-Language: ja,en-US;q=0.7,en;q=0.3" \
+            -H "Accept-Encoding: gzip, deflate, br" \
+            -L \
+            "https://www.31sumai.com/attend/X2121/" -o current_raw.html
+
+          # Check if we got a valid response
+          if [ ! -s current_raw.html ]; then
+            echo "Failed to fetch page — skipping this run."
+            echo "changed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
 
           cat current_raw.html \
             | sed 's/<[^>]*>//g' \
