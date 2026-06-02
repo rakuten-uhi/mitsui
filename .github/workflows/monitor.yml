@@ -76,7 +76,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d "{
               \"from\": \"Site Monitor <onboarding@resend.dev>\",
-              \"to\": \"yuhi.fujimaki@rakuten.com\",
+              \"to\": \"uhi_fifa@hotmail.com\",
               \"subject\": \"【変更検知】31sumai.com/attend/X2121\",
               \"html\": \"<h2>ページに変更がありました</h2><p><strong>URL:</strong> <a href='https://www.31sumai.com/attend/X2121/'>https://www.31sumai.com/attend/X2121/</a></p><p><strong>検知時刻:</strong> $(date -u '+%Y-%m-%d %H:%M UTC')</p><p>変更内容を確認してください。</p>\"
             }"
