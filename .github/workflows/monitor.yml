@@ -55,28 +55,15 @@ jobs:
           git diff --staged --quiet || git commit -m "Update snapshot $(date -u '+%Y-%m-%d %H:%M UTC')"
           git push
 
-      - name: Send Teams notification
+      - name: Send email notification
         if: steps.check.outputs.changed == 'true'
         run: |
-          curl -s -X POST "${{ secrets.TEAMS_WEBHOOK_URL }}" \
+          curl -s -X POST "https://api.resend.com/emails" \
+            -H "Authorization: Bearer ${{ secrets.RESEND_API_KEY }}" \
             -H "Content-Type: application/json" \
             -d "{
-              \"@type\": \"MessageCard\",
-              \"@context\": \"http://schema.org/extensions\",
-              \"themeColor\": \"FF0000\",
-              \"summary\": \"変更検知: 31sumai X2121\",
-              \"sections\": [{
-                \"activityTitle\": \"【変更検知】31sumai.com/attend/X2121\",
-                \"activitySubtitle\": \"ページに変更がありました\",
-                \"facts\": [
-                  { \"name\": \"URL\", \"value\": \"https://www.31sumai.com/attend/X2121/\" },
-                  { \"name\": \"検知時刻\", \"value\": \"$(date -u '+%Y-%m-%d %H:%M UTC')\" }
-                ],
-                \"text\": \"変更内容を確認してください。\"
-              }],
-              \"potentialAction\": [{
-                \"@type\": \"OpenUri\",
-                \"name\": \"ページを開く\",
-                \"targets\": [{ \"os\": \"default\", \"uri\": \"https://www.31sumai.com/attend/X2121/\" }]
-              }]
+              \"from\": \"Site Monitor <onboarding@resend.dev>\",
+              \"to\": \"yuhi.fujimaki@rakuten.com\",
+              \"subject\": \"【変更検知】31sumai.com/attend/X2121\",
+              \"html\": \"<h2>ページに変更がありました</h2><p><strong>URL:</strong> <a href='https://www.31sumai.com/attend/X2121/'>https://www.31sumai.com/attend/X2121/</a></p><p><strong>検知時刻:</strong> $(date -u '+%Y-%m-%d %H:%M UTC')</p><p>変更内容を確認してください。</p>\"
             }"
