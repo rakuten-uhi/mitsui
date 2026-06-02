@@ -1,0 +1,78 @@
+name: Monitor 31sumai X2121
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch page and check for changes
+        id: check
+        run: |
+          curl -s -A "Mozilla/5.0" "https://www.31sumai.com/attend/X2121/" -o current_raw.html
+
+          cat current_raw.html \
+            | sed 's/<[^>]*>//g' \
+            | sed '/^[[:space:]]*$/d' \
+            | sed 's/^[[:space:]]*//' \
+            > current.txt
+
+          if [ ! -f snapshot.txt ]; then
+            echo "First run — saving snapshot."
+            cp current.txt snapshot.txt
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            if diff -q snapshot.txt current.txt > /dev/null 2>&1; then
+              echo "No changes detected."
+              echo "changed=false" >> $GITHUB_OUTPUT
+            else
+              echo "Changes detected!"
+              diff snapshot.txt current.txt > diff_output.txt || true
+              cp current.txt snapshot.txt
+              echo "changed=true" >> $GITHUB_OUTPUT
+              DIFF_CONTENT=$(head -50 diff_output.txt)
+              echo "diff_content<<EOF" >> $GITHUB_OUTPUT
+              echo "$DIFF_CONTENT" >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Commit updated snapshot
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add snapshot.txt
+          git diff --staged --quiet || git commit -m "Update snapshot $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git push
+
+      - name: Send Teams notification
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          curl -s -X POST "${{ secrets.TEAMS_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"@type\": \"MessageCard\",
+              \"@context\": \"http://schema.org/extensions\",
+              \"themeColor\": \"FF0000\",
+              \"summary\": \"変更検知: 31sumai X2121\",
+              \"sections\": [{
+                \"activityTitle\": \"【変更検知】31sumai.com/attend/X2121\",
+                \"activitySubtitle\": \"ページに変更がありました\",
+                \"facts\": [
+                  { \"name\": \"URL\", \"value\": \"https://www.31sumai.com/attend/X2121/\" },
+                  { \"name\": \"検知時刻\", \"value\": \"$(date -u '+%Y-%m-%d %H:%M UTC')\" }
+                ],
+                \"text\": \"変更内容を確認してください。\"
+              }],
+              \"potentialAction\": [{
+                \"@type\": \"OpenUri\",
+                \"name\": \"ページを開く\",
+                \"targets\": [{ \"os\": \"default\", \"uri\": \"https://www.31sumai.com/attend/X2121/\" }]
+              }]
+            }"
